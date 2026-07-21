@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Media Interaktif - Pola Bilangan | I Made Edy Bangkit Saputra</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Poppins', 'sans-serif'], inter: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#3b82f6', secondary: '#8b5cf6', dark: '#0f172a', panel: 'rgba(30, 41, 59, 0.7)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { margin: 0; overflow: hidden; background: #0f172a; color: white; touch-action: manipulation; }
+        
+        /* Background Animation */
+        .bg-shapes { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
+        .shape { position: absolute; filter: blur(60px); border-radius: 50%; animation: float 15s infinite ease-in-out alternate; }
+        .shape-1 { width: 300px; height: 300px; background: rgba(59, 130, 246, 0.4); top: -10%; left: -10%; }
+        .shape-2 { width: 400px; height: 400px; background: rgba(139, 92, 246, 0.4); bottom: -10%; right: -10%; animation-delay: -5s; }
+        .shape-3 { width: 250px; height: 250px; background: rgba(14, 165, 233, 0.3); top: 40%; left: 40%; animation-delay: -10s; }
+        @keyframes float { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(50px, 50px) scale(1.2); } }
+
+        /* Slide Transitions */
+        .slide { position: absolute; inset: 0; opacity: 0; transform: translateY(20px); transition: all 0.5s ease-in-out; pointer-events: none; z-index: 0; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; padding-bottom: 80px; }
+        .slide.active { opacity: 1; transform: translateY(0); pointer-events: auto; z-index: 10; }
+        
+        /* Glassmorphism */
+        .glass { background: var(--panel); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); }
+        .glass-btn { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(5px); border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.3s; }
+        .glass-btn:hover { background: rgba(255, 255, 255, 0.25); transform: translateY(-2px); }
+        .glass-btn:active { transform: translateY(0); }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
+
+        /* Game Elements */
+        .tab-btn.active { border-bottom: 2px solid #3b82f6; color: #3b82f6; font-weight: bold; }
+        .drop-zone { min-height: 40px; min-width: 120px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: 0.3s; cursor: pointer; }
+        .drop-zone.filled { border-style: solid; border-color: #3b82f6; background: rgba(59, 130, 246, 0.2); }
+        .drag-item { cursor: pointer; user-select: none; transition: 0.2s; }
+        .drag-item.selected { box-shadow: 0 0 0 3px #fbbf24; transform: scale(1.05); }
+        .drag-item.correct { background: #10b981 !important; border-color: #059669 !important; pointer-events: none; }
+        .drag-item.wrong { background: #ef4444 !important; border-color: #b91c1c !important; }
+        
+        .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(50px); opacity: 0; transition: all 0.3s; z-index: 100; pointer-events: none; }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        /* Confetti */
+        #confetti-canvas { position: fixed; inset: 0; z-index: 999; pointer-events: none; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+
+    <!-- Top Navigation Bar -->
+    <nav class="fixed top-0 left-0 right-0 h-16 glass z-50 flex items-center justify-between px-4 md:px-8 border-b-0 border-white/10">
+        <div class="flex items-center gap-3">
+            <button onclick="goToSlide(1)" class="w-10 h-10 rounded-full glass-btn flex items-center justify-center text-white" title="Menu Utama" id="btn-menu" style="display: none;">
+                <i class="fas fa-home"></i>
+            </button>
+            <div class="font-bold text-lg md:text-xl text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 hidden sm:block">
+                Pola Bilangan Interaktif
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="slide-indicator" class="text-sm font-medium text-gray-300 bg-white/10 px-3 py-1 rounded-full">Slide 1/13</span>
+            <button onclick="toggleFullscreen()" class="w-10 h-10 rounded-full glass-btn flex items-center justify-center text-white" title="Maximize/Fullscreen">
+                <i class="fas fa-expand" id="icon-fullscreen"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Container for Slides -->
+    <main class="w-full h-screen pt-16 relative" id="slides-container">
+
+        <section id="slide-0" class="slide active">
+            <div class="flex-1 flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-6 text-center">
+                <div class="glass p-8 md:p-12 rounded-3xl max-w-2xl w-full mx-auto relative overflow-hidden">
+                    <div class="absolute -right-10 -top-10 text-9xl text-white/5 opacity-50"><i class="fas fa-square-root-variable"></i></div>
+                    
+                    <svg class="w-32 h-32 mx-auto mb-6 drop-shadow-2xl" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="45" stroke="url(#paint0_linear)" stroke-width="2"/>
+                        <circle cx="50" cy="50" r="30" stroke="url(#paint1_linear)" stroke-width="4" stroke-dasharray="10 5"/>
+                        <path d="M50 20 L75 75 L25 75 Z" fill="rgba(139, 92, 246, 0.4)" stroke="#8b5cf6" stroke-width="2"/>
+                        <circle cx="50" cy="35" r="4" fill="#60a5fa"/>
+                        <circle cx="35" cy="65" r="4" fill="#60a5fa"/>
+                        <circle cx="65" cy="65" r="4" fill="#60a5fa"/>
+                        <defs>
+                            <linearGradient id="paint0_linear" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#3b82f6"/> <stop offset="1" stop-color="#8b5cf6"/>
+                            </linearGradient>
+                            <linearGradient id="paint1_linear" x1="100" y1="0" x2="0" y2="100" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#0ea5e9"/> <stop offset="1" stop-color="#d946ef"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+
+                    <h2 class="text-xl md:text-2xl font-medium text-blue-300 mb-2">Media Pembelajaran Interaktif</h2>
+                    <h1 class="text-4xl md:text-5xl font-bold text-white mb-6 tracking-tight">POLA BILANGAN</h1>
+                    
+                    <div class="inline-flex items-center gap-3 bg-white/10 px-5 py-2 rounded-full mb-8">
+                        <i class="fas fa-chalkboard-user text-purple-400"></i>
+                        <span class="font-medium">Oleh: <span class="text-white font-semibold">I Made Edy Bangkit Saputra</span></span>
+                    </div>
+                    
+                    <br>
+                    <button onclick="goToSlide(1)" class="group relative px-8 py-4 font-bold text-white rounded-full bg-gradient-to-r from-blue-500 to-purple-600 shadow-[0_0_20px_rgba(59,130,246,0.5)] hover:shadow-[0_0_30px_rgba(139,92,246,0.7)] transition-all duration-300 hover:scale-105">
+                        <span class="mr-2">Mulai Belajar</span>
+                        <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="slide-1" class="slide">
+            <div class="max-w-4xl mx-auto p-6 mt-10">
+                <h2 class="text-3xl font-bold text-center mb-10 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Pilih Menu Pembelajaran</h2>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                    <!-- Menu Cards -->
+                    <div onclick="goToSlide(2)" class="glass p-6 rounded-2xl cursor-pointer hover:bg-white/10 transition group text-center border-t-4 border-blue-400">
+                        <div class="w-14 h-14 mx-auto bg-blue-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="fas fa-bullseye text-2xl text-blue-400"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm md:text-base">Tujuan</h3>
+                    </div>
+                    
+                    <div onclick="goToSlide(3)" class="glass p-6 rounded-2xl cursor-pointer hover:bg-white/10 transition group text-center border-t-4 border-purple-400">
+                        <div class="w-14 h-14 mx-auto bg-purple-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="fas fa-sitemap text-2xl text-purple-400"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm md:text-base">Peta Konsep</h3>
+                    </div>
+
+                    <div onclick="goToSlide(4)" class="glass p-6 rounded-2xl cursor-pointer hover:bg-white/10 transition group text-center border-t-4 border-cyan-400">
+                        <div class="w-14 h-14 mx-auto bg-cyan-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="fas fa-book-open text-2xl text-cyan-400"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm md:text-base">Materi 1</h3>
+                    </div>
+
+                    <div onclick="goToSlide(7)" class="glass p-6 rounded-2xl cursor-pointer hover:bg-white/10 transition group text-center border-t-4 border-red-400">
+                        <div class="w-14 h-14 mx-auto bg-red-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="fab fa-youtube text-2xl text-red-400"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm md:text-base">Video Belajar</h3>
+                    </div>
+
+                    <div onclick="goToSlide(8)" class="glass p-6 rounded-2xl cursor-pointer hover:bg-white/10 transition group text-center border-t-4 border-green-400">
+                        <div class="w-14 h-14 mx-auto bg-green-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="fas fa-sliders-h text-2xl text-green-400"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm md:text-base">Simulasi</h3>
+                    </div>
+
+                    <div onclick="goToSlide(9)" class="glass p-6 rounded-2xl cursor-pointer hover:bg-white/10 transition group text-center border-t-4 border-yellow-400">
+                        <div class="w-14 h-14 mx-auto bg-yellow-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="fas fa-gamepad text-2xl text-yellow-400"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm md:text-base">Game Edukasi</h3>
+                    </div>
+
+                    <div onclick="goToSlide(10)" class="glass p-6 rounded-2xl cursor-pointer hover:bg-white/10 transition group text-center border-t-4 border-orange-400">
+                        <div class="w-14 h-14 mx-auto bg-orange-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="fas fa-question-circle text-2xl text-orange-400"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm md:text-base">Kuis Interaktif</h3>
+                    </div>
+
+                    <div onclick="goToSlide(11)" class="glass p-6 rounded-2xl cursor-pointer hover:bg-white/10 transition group text-center border-t-4 border-pink-400">
+                        <div class="w-14 h-14 mx-auto bg-pink-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="fas fa-layer-group text-2xl text-pink-400"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm md:text-base">Rangkuman</h3>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="slide-2" class="slide">
+            <div class="max-w-4xl mx-auto p-6 mt-10">
+                <div class="glass p-8 rounded-3xl relative">
+                    <div class="absolute top-0 right-10 -translate-y-1/2 bg-blue-600 p-4 rounded-xl shadow-lg shadow-blue-500/50">
+                        <i class="fas fa-bullseye text-3xl text-white"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold mb-8 text-blue-400 border-b border-white/20 pb-4">Tujuan Pembelajaran</h2>
+                    
+                    <p class="text-gray-300 mb-6">Halo sobat pelajar Kelas 7! Setelah mengikuti petualangan belajar di media ini, kamu diharapkan mampu:</p>
+                    
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-4 p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition">
+                            <div class="w-8 h-8 shrink-0 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">1</div>
+                            <p class="text-gray-200">Memahami konsep dan pengertian <strong>pola konfigurasi objek</strong> dan pola bilangan dalam kehidupan sehari-hari dengan tepat.</p>
+                        </li>
+                        <li class="flex items-start gap-4 p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition">
+                            <div class="w-8 h-8 shrink-0 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">2</div>
+                            <p class="text-gray-200">Mengidentifikasi berbagai jenis pola bilangan (seperti bilangan ganjil, genap, persegi, persegi panjang, dan segitiga).</p>
+                        </li>
+                        <li class="flex items-start gap-4 p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition">
+                            <div class="w-8 h-8 shrink-0 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">3</div>
+                            <p class="text-gray-200">Menentukan <strong>suku ke-n</strong> dari suatu pola bilangan untuk menyelesaikan masalah nyata secara kreatif dan bernalar kritis (Sesuai Profil Pelajar Pancasila).</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="slide-3" class="slide">
+            <div class="max-w-5xl mx-auto p-6 mt-10">
+                <h2 class="text-3xl font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Peta Konsep</h2>
+                
+                <div class="glass p-6 md:p-10 rounded-3xl flex justify-center overflow-x-auto">
+                    <!-- CSS based Mindmap -->
+                    <div class="flex flex-col items-center min-w-[600px]">
+                        <!-- Root -->
+                        <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-8 py-4 rounded-xl shadow-lg border border-blue-400 font-bold text-xl relative z-10">
+                            Pola Bilangan
+                        </div>
+                        <!-- Connector down -->
+                        <div class="w-1 h-10 bg-blue-400"></div>
+                        <!-- Horizontal bar -->
+                        <div class="w-full max-w-[700px] h-1 bg-blue-400 flex justify-between relative">
+                            <!-- Drop downs -->
+                            <div class="w-1 h-10 bg-blue-400 absolute left-0"></div>
+                            <div class="w-1 h-10 bg-blue-400 absolute left-1/4"></div>
+                            <div class="w-1 h-10 bg-blue-400 absolute left-2/4"></div>
+                            <div class="w-1 h-10 bg-blue-400 absolute left-3/4"></div>
+                            <div class="w-1 h-10 bg-blue-400 absolute right-0"></div>
+                        </div>
+                        
+                        <!-- Nodes -->
+                        <div class="flex justify-between w-full max-w-[760px] gap-2 mt-10 pt-2">
+                            <div class="flex flex-col items-center flex-1">
+                                <div class="bg-purple-600/80 px-4 py-3 rounded-lg border border-purple-400 text-center text-sm font-semibold shadow-md w-full">Ganjil</div>
+                            </div>
+                            <div class="flex flex-col items-center flex-1">
+                                <div class="bg-purple-600/80 px-4 py-3 rounded-lg border border-purple-400 text-center text-sm font-semibold shadow-md w-full">Genap</div>
+                            </div>
+                            <div class="flex flex-col items-center flex-1">
+                                <div class="bg-cyan-600/80 px-4 py-3 rounded-lg border border-cyan-400 text-center text-sm font-semibold shadow-md w-full">Persegi</div>
+                            </div>
+                            <div class="flex flex-col items-center flex-1">
+                                <div class="bg-cyan-600/80 px-4 py-2 rounded-lg border border-cyan-400 text-center text-sm font-semibold shadow-md w-full">Persegi<br>Panjang</div>
+                            </div>
+                            <div class="flex flex-col items-center flex-1">
+                                <div class="bg-green-600/80 px-4 py-3 rounded-lg border border-green-400 text-center text-sm font-semibold shadow-md w-full">Segitiga</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-12 bg-white/5 border border-white/10 p-4 rounded-xl text-center w-full max-w-lg text-sm text-gray-300">
+                            <i class="fas fa-info-circle text-blue-400 mr-2"></i> Peta konsep ini menunjukkan jenis-jenis susunan bilangan atau objek yang akan kita pelajari formulanya.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="slide-4" class="slide">
+            <div class="max-w-5xl mx-auto p-6 mt-6 md:mt-10 grid md:grid-cols-2 gap-6 items-center">
+                <div class="glass p-6 md:p-8 rounded-3xl">
+                    <h2 class="text-2xl font-bold text-blue-400 mb-4">1. Apa itu Pola Bilangan?</h2>
+                    <p class="text-gray-200 mb-4 text-sm md:text-base leading-relaxed">
+                        Pernahkah kamu mencari alamat rumah di suatu perumahan? Biasanya sisi kiri jalan bernomor <strong>1, 3, 5</strong> dan sisi kanan bernomor <strong>2, 4, 6</strong>. Keteraturan urutan angka-angka tersebut dinamakan <strong>Pola Bilangan</strong>.
+                    </p>
+                    <div class="bg-blue-900/40 p-4 rounded-xl border border-blue-500/30 mb-6">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="font-semibold text-cyan-300">Pola Ganjil</span>
+                            <span class="text-xs bg-cyan-700 px-2 py-1 rounded">Rumus: 2n - 1</span>
+                        </div>
+                        <p class="text-sm text-gray-300">Barisan: 1, 3, 5, 7, ... <br> Suku ke-4 (n=4) adalah 7.</p>
+                    </div>
+                    
+                    <div class="bg-purple-900/40 p-4 rounded-xl border border-purple-500/30">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="font-semibold text-purple-300">Pola Genap</span>
+                            <span class="text-xs bg-purple-700 px-2 py-1 rounded">Rumus: 2n</span>
+                        </div>
+                        <p class="text-sm text-gray-300">Barisan: 2, 4, 6, 8, ... <br> Suku ke-4 (n=4) adalah 8.</p>
+                    </div>
+                </div>
+                
+                <div class="glass p-6 md:p-8 rounded-3xl flex flex-col items-center justify-center h-full">
+                    <h3 class="text-lg font-semibold mb-6 text-gray-300">Ilustrasi Rumah (Contoh Nyata)</h3>
+                    <!-- SVG Rumah Ganjil Genap -->
+                    <svg viewBox="0 0 200 150" class="w-full max-w-sm drop-shadow-lg">
+                        <!-- Jalan -->
+                        <path d="M100 0 L100 150" stroke="#475569" stroke-width="30" stroke-dasharray="10 10"/>
+                        <!-- Kiri (Ganjil) -->
+                        <rect x="20" y="20" width="40" height="40" fill="#3b82f6" rx="5"/>
+                        <polygon points="20,20 40,5 60,20" fill="#1d4ed8"/>
+                        <text x="40" y="45" fill="white" font-size="14" text-anchor="middle" font-weight="bold">1</text>
+                        
+                        <rect x="20" y="90" width="40" height="40" fill="#3b82f6" rx="5"/>
+                        <polygon points="20,90 40,75 60,90" fill="#1d4ed8"/>
+                        <text x="40" y="115" fill="white" font-size="14" text-anchor="middle" font-weight="bold">3</text>
+                        
+                        <!-- Kanan (Genap) -->
+                        <rect x="140" y="20" width="40" height="40" fill="#8b5cf6" rx="5"/>
+                        <polygon points="140,20 160,5 180,20" fill="#5b21b6"/>
+                        <text x="160" y="45" fill="white" font-size="14" text-anchor="middle" font-weight="bold">2</text>
+                        
+                        <rect x="140" y="90" width="40" height="40" fill="#8b5cf6" rx="5"/>
+                        <polygon points="140,90 160,75 180,90" fill="#5b21b6"/>
+                        <text x="160" y="115" fill="white" font-size="14" text-anchor="middle" font-weight="bold">4</text>
+                    </svg>
+                    <p class="text-xs text-gray-400 mt-4 text-center">Rumah kiri bernomor ganjil, rumah kanan bernomor genap.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="slide-5" class="slide">
+            <div class="max-w-5xl mx-auto p-6 mt-6 md:mt-10">
+                <div class="glass p-6 md:p-8 rounded-3xl">
+                    <h2 class="text-2xl font-bold text-cyan-400 mb-6"><i class="fas fa-square-full mr-2"></i> 2. Pola Persegi & Persegi Panjang</h2>
+                    
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <!-- Pola Persegi -->
+                        <div class="bg-white/5 p-5 rounded-2xl border border-white/10">
+                            <h3 class="text-xl font-semibold text-white mb-2">Pola Persegi (Kuadrat)</h3>
+                            <p class="text-sm text-gray-300 mb-4">Barisan: 1, 4, 9, 16, 25, ...</p>
+                            <div class="flex gap-4 items-end mb-4 h-24">
+                                <!-- SVG Pola 1, 4, 9 -->
+                                <svg width="20" height="20"><circle cx="10" cy="10" r="5" fill="#22d3ee"/></svg>
+                                <svg width="30" height="30">
+                                    <circle cx="10" cy="10" r="4" fill="#22d3ee"/><circle cx="20" cy="10" r="4" fill="#22d3ee"/>
+                                    <circle cx="10" cy="20" r="4" fill="#22d3ee"/><circle cx="20" cy="20" r="4" fill="#22d3ee"/>
+                                </svg>
+                                <svg width="45" height="45">
+                                    <circle cx="10" cy="10" r="3" fill="#22d3ee"/><circle cx="20" cy="10" r="3" fill="#22d3ee"/><circle cx="30" cy="10" r="3" fill="#22d3ee"/>
+                                    <circle cx="10" cy="20" r="3" fill="#22d3ee"/><circle cx="20" cy="20" r="3" fill="#22d3ee"/><circle cx="30" cy="20" r="3" fill="#22d3ee"/>
+                                    <circle cx="10" cy="30" r="3" fill="#22d3ee"/><circle cx="20" cy="30" r="3" fill="#22d3ee"/><circle cx="30" cy="30" r="3" fill="#22d3ee"/>
+                                </svg>
+                            </div>
+                            <div class="bg-cyan-900/50 text-cyan-200 text-center py-2 rounded-lg font-mono font-bold border border-cyan-500/50">
+                                Rumus: Un = n²
+                            </div>
+                        </div>
+
+                        <!-- Pola Persegi Panjang -->
+                        <div class="bg-white/5 p-5 rounded-2xl border border-white/10">
+                            <h3 class="text-xl font-semibold text-white mb-2">Pola Persegi Panjang</h3>
+                            <p class="text-sm text-gray-300 mb-4">Barisan: 2, 6, 12, 20, ...</p>
+                            <div class="flex gap-4 items-end mb-4 h-24">
+                                <!-- SVG Pola 2, 6, 12 -->
+                                <svg width="30" height="20">
+                                    <circle cx="10" cy="10" r="4" fill="#fbbf24"/><circle cx="20" cy="10" r="4" fill="#fbbf24"/>
+                                </svg>
+                                <svg width="40" height="30">
+                                    <circle cx="10" cy="10" r="4" fill="#fbbf24"/><circle cx="20" cy="10" r="4" fill="#fbbf24"/><circle cx="30" cy="10" r="4" fill="#fbbf24"/>
+                                    <circle cx="10" cy="20" r="4" fill="#fbbf24"/><circle cx="20" cy="20" r="4" fill="#fbbf24"/><circle cx="30" cy="20" r="4" fill="#fbbf24"/>
+                                </svg>
+                                <svg width="55" height="40">
+                                    <circle cx="10" cy="10" r="3" fill="#fbbf24"/><circle cx="20" cy="10" r="3" fill="#fbbf24"/><circle cx="30" cy="10" r="3" fill="#fbbf24"/><circle cx="40" cy="10" r="3" fill="#fbbf24"/>
+                                    <circle cx="10" cy="20" r="3" fill="#fbbf24"/><circle cx="20" cy="20" r="3" fill="#fbbf24"/><circle cx="30" cy="20" r="3" fill="#fbbf24"/><circle cx="40" cy="20" r="3" fill="#fbbf24"/>
+                                    <circle cx="10" cy="30" r="3" fill="#fbbf24"/><circle cx="20" cy="30" r="3" fill="#fbbf24"/><circle cx="30" cy="30" r="3" fill="#fbbf24"/><circle cx="40" cy="30" r="3" fill="#fbbf24"/>
+                                </svg>
+                            </div>
+                            <div class="bg-yellow-900/50 text-yellow-200 text-center py-2 rounded-lg font-mono font-bold border border-yellow-500/50">
+                                Rumus: Un = n × (n + 1)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="slide-6" class="slide">
+            <div class="max-w-4xl mx-auto p-6 mt-10">
+                <div class="glass p-8 rounded-3xl flex flex-col items-center">
+                    <h2 class="text-2xl font-bold text-green-400 mb-6"><i class="fas fa-caret-up mr-2"></i> 3. Pola Segitiga</h2>
+                    <p class="text-center text-gray-200 mb-6">
+                        Pola segitiga susunannya berbentuk menyerupai bangun segitiga sama sisi. 
+                        Jumlah objeknya didapatkan dari setengah jumlah objek pola persegi panjang.
+                    </p>
+                    
+                    <div class="flex justify-center gap-6 mb-8 bg-white/5 p-6 rounded-2xl w-full">
+                        <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="6" fill="#4ade80"/></svg>
+                        <svg width="40" height="40" viewBox="0 0 40 40">
+                            <circle cx="20" cy="10" r="5" fill="#4ade80"/>
+                            <circle cx="10" cy="30" r="5" fill="#4ade80"/><circle cx="30" cy="30" r="5" fill="#4ade80"/>
+                        </svg>
+                        <svg width="60" height="60" viewBox="0 0 60 60">
+                            <circle cx="30" cy="10" r="4" fill="#4ade80"/>
+                            <circle cx="20" cy="30" r="4" fill="#4ade80"/><circle cx="40" cy="30" r="4" fill="#4ade80"/>
+                            <circle cx="10" cy="50" r="4" fill="#4ade80"/><circle cx="30" cy="50" r="4" fill="#4ade80"/><circle cx="50" cy="50" r="4" fill="#4ade80"/>
+                        </svg>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-4 w-full">
+                        <div class="flex-1 bg-gray-800/80 p-4 rounded-xl border border-gray-600 text-center">
+                            <span class="block text-sm text-gray-400 mb-1">Barisan Bilangan:</span>
+                            <span class="text-xl font-bold text-white">1, 3, 6, 10, 15, ...</span>
+                        </div>
+                        <div class="flex-1 bg-green-900/40 p-4 rounded-xl border border-green-500/50 text-center flex flex-col justify-center">
+                            <span class="block text-sm text-green-200 mb-1">Rumus Suku ke-n:</span>
+                            <span class="text-xl font-bold font-mono text-green-400">Un = <sup class="text-sm">n(n+1)</sup>/<sub>2</sub></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="slide-7" class="slide">
+            <div class="max-w-5xl mx-auto p-6 mt-6 md:mt-10">
+                <div class="glass p-4 md:p-6 rounded-3xl">
+                    <h2 class="text-2xl font-bold mb-4 text-center text-red-400"><i class="fab fa-youtube mr-2"></i> Video Pembelajaran</h2>
+                    <p class="text-center text-sm text-gray-300 mb-6">Tonton penjelasan detail mengenai materi Pola Bilangan dari channel Bapak Bangkit Saputra berikut ini.</p>
+                    
+                    <div class="relative w-full overflow-hidden rounded-2xl bg-black shadow-2xl" style="padding-top: 56.25%;">
+                        <iframe class="absolute inset-0 w-full h-full border-0" src="https://www.youtube.com/embed/JRsGtPwjCww" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="slide-8" class="slide">
+            <div class="max-w-5xl mx-auto p-6 mt-6">
+                <h2 class="text-3xl font-bold text-center mb-6 text-green-400">Simulasi Pola Bilangan</h2>
+                
+                <div class="glass p-6 rounded-3xl flex flex-col md:flex-row gap-8">
+                    <!-- Controls -->
+                    <div class="w-full md:w-1/3 bg-white/5 p-5 rounded-2xl border border-white/10 flex flex-col gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-200">Pilih Jenis Pola:</label>
+                            <select id="sim-type" class="w-full bg-gray-800 border border-gray-600 text-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none" onchange="updateSimulation()">
+                                <option value="ganjil">Pola Ganjil</option>
+                                <option value="genap">Pola Genap</option>
+                                <option value="persegi">Pola Persegi</option>
+                                <option value="persegipanjang">Pola Persegi Panjang</option>
+                                <option value="segitiga">Pola Segitiga</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-gray-200">Suku ke-n (1 - 10): <span id="sim-n-val" class="text-blue-400 font-bold">4</span></label>
+                            <input type="range" id="sim-slider" min="1" max="10" value="4" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer" oninput="updateSimulation()">
+                        </div>
+
+                        <div class="mt-auto bg-blue-900/30 p-4 rounded-xl border border-blue-500/30 text-center">
+                            <span class="block text-sm text-gray-400 mb-1">Total Objek (Hasil):</span>
+                            <span id="sim-result" class="text-4xl font-bold text-white">7</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Visualizer -->
+                    <div class="w-full md:w-2/3 bg-gray-900/80 rounded-2xl border border-gray-700 min-h-[350px] flex items-center justify-center p-4 relative overflow-hidden">
+                        <div id="sim-visual" class="flex flex-wrap justify-center gap-2 max-w-full">
+                            <!-- JS will populate SVG/dots here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="slide-9" class="slide">
+            <div class="max-w-5xl mx-auto p-4 mt-4">
+                <h2 class="text-2xl font-bold text-center mb-4 text-yellow-400"><i class="fas fa-gamepad mr-2"></i> Zona Game Edukasi</h2>
+                
+                <div class="glass rounded-3xl overflow-hidden flex flex-col h-[calc(100vh-160px)] md:h-auto">
+                    <!-- Tabs -->
+                    <div class="flex overflow-x-auto bg-black/40 border-b border-white/10 shrink-0">
+                        <button onclick="openGameTab('g1')" id="tab-g1" class="tab-btn active px-4 py-3 text-sm md:text-base font-semibold text-gray-400 whitespace-nowrap hover:text-white transition">1. Pasangkan</button>
+                        <button onclick="openGameTab('g2')" id="tab-g2" class="tab-btn px-4 py-3 text-sm md:text-base font-semibold text-gray-400 whitespace-nowrap hover:text-white transition">2. Susun Kata</button>
+                        <button onclick="openGameTab('g3')" id="tab-g3" class="tab-btn px-4 py-3 text-sm md:text-base font-semibold text-gray-400 whitespace-nowrap hover:text-white transition">3. Isian Singkat</button>
+                        <button onclick="openGameTab('g4')" id="tab-g4" class="tab-btn px-4 py-3 text-sm md:text-base font-semibold text-gray-400 whitespace-nowrap hover:text-white transition">4. Tebak Gambar</button>
+                    </div>
+
+                    <!-- Tab Content Area -->
+                    <div class="p-4 md:p-6 flex-1 overflow-y-auto">
+                        
+                        <!-- Game 1: Drag & Drop (Pasangkan) -->
+                        <div id="game-1" class="game-content block">
+                            <p class="text-center text-sm text-gray-300 mb-6"><strong>Cara Main:</strong> Klik pada barisan angka di kiri, lalu klik pada kotak kosong di kanan yang sesuai!</p>
+                            
+                            <div class="flex flex-col md:flex-row gap-8 justify-center max-w-3xl mx-auto">
+                                <!-- Source Items -->
+                                <div class="flex-1 flex flex-col gap-3" id="g1-sources">
+                                    <div class="drag-item bg-blue-600 p-3 rounded-lg text-center font-bold" onclick="selectG1(this, 'ganjil')">1, 3, 5, 7, 9, ...</div>
+                                    <div class="drag-item bg-blue-600 p-3 rounded-lg text-center font-bold" onclick="selectG1(this, 'genap')">2, 4, 6, 8, 10, ...</div>
+                                    <div class="drag-item bg-blue-600 p-3 rounded-lg text-center font-bold" onclick="selectG1(this, 'persegi')">1, 4, 9, 16, 25, ...</div>
+                                    <div class="drag-item bg-blue-600 p-3 rounded-lg text-center font-bold" onclick="selectG1(this, 'persegipanjang')">2, 6, 12, 20, 30, ...</div>
+                                    <div class="drag-item bg-blue-600 p-3 rounded-lg text-center font-bold" onclick="selectG1(this, 'segitiga')">1, 3, 6, 10, 15, ...</div>
+                                </div>
+                                
+                                <!-- Drop Zones -->
+                                <div class="flex-1 flex flex-col gap-3">
+                                    <div class="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/10">
+                                        <span class="w-32 text-sm font-semibold">Pola Persegi</span>
+                                        <div class="drop-zone flex-1 ml-4" onclick="dropG1(this, 'persegi')"></div>
+                                    </div>
+                                    <div class="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/10">
+                                        <span class="w-32 text-sm font-semibold">Pola Ganjil</span>
+                                        <div class="drop-zone flex-1 ml-4" onclick="dropG1(this, 'ganjil')"></div>
+                                    </div>
+                                    <div class="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/10">
+                                        <span class="w-32 text-sm font-semibold">Pola Segitiga</span>
+                                        <div class="drop-zone flex-1 ml-4" onclick="dropG1(this, 'segitiga')"></div>
+                                    </div>
+                                    <div class="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/10">
+                                        <span class="w-32 text-sm font-semibold">Pola Genap</span>
+                                        <div class="drop-zone flex-1 ml-4" onclick="dropG1(this, 'genap')"></div>
+                                    </div>
+                                    <div class="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/10">
+                                        <span class="w-32 text-sm font-semibold text-xs leading-tight">Pola Persegi Panjang</span>
+                                        <div class="drop-zone flex-1 ml-4" onclick="dropG1(this, 'persegipanjang')"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center mt-6">
+                                <button onclick="checkG1()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full font-bold transition">Cek Jawaban</button>
+                            </div>
+                        </div>
+
+                        <!-- Game 2: Drag the words (Susun Kata) -->
+                        <div id="game-2" class="game-content hidden">
+                            <p class="text-center text-sm text-gray-300 mb-6"><strong>Cara Main:</strong> Klik kata di kotak bawah, lalu klik pada garis kosong di dalam teks!</p>
+                            
+                            <div class="bg-white/10 p-6 rounded-2xl mb-6 text-lg leading-loose text-justify relative">
+                                Pola bilangan yang terbentuk dari kuadrat bilangan asli disebut pola 
+                                <span class="drop-zone-text inline-block min-w-[80px] h-8 border-b-2 border-dashed border-gray-400 mx-1 align-middle cursor-pointer text-center text-sm font-bold text-yellow-300" onclick="dropG2(this, 'persegi')"></span>. 
+                                Susunan bilangannya adalah 1, 4, 
+                                <span class="drop-zone-text inline-block min-w-[50px] h-8 border-b-2 border-dashed border-gray-400 mx-1 align-middle cursor-pointer text-center text-sm font-bold text-yellow-300" onclick="dropG2(this, '9')"></span>, 16. 
+                                Sementara itu, pola yang memiliki rumus 2n disebut pola 
+                                <span class="drop-zone-text inline-block min-w-[80px] h-8 border-b-2 border-dashed border-gray-400 mx-1 align-middle cursor-pointer text-center text-sm font-bold text-yellow-300" onclick="dropG2(this, 'genap')"></span>. 
+                                Berbeda lagi dengan pola 
+                                <span class="drop-zone-text inline-block min-w-[80px] h-8 border-b-2 border-dashed border-gray-400 mx-1 align-middle cursor-pointer text-center text-sm font-bold text-yellow-300" onclick="dropG2(this, 'ganjil')"></span> 
+                                yang memiliki rumus 2n - 1. Pola segitiga didapat dengan menjumlahkan bilangan asli secara berurutan, berawal dari angka 
+                                <span class="drop-zone-text inline-block min-w-[50px] h-8 border-b-2 border-dashed border-gray-400 mx-1 align-middle cursor-pointer text-center text-sm font-bold text-yellow-300" onclick="dropG2(this, '1')"></span>.
+                            </div>
+                            
+                            <div class="flex flex-wrap justify-center gap-3" id="g2-words">
+                                <div class="word-chip bg-purple-600 px-4 py-2 rounded-full cursor-pointer hover:bg-purple-500 font-semibold" onclick="selectG2(this)">9</div>
+                                <div class="word-chip bg-purple-600 px-4 py-2 rounded-full cursor-pointer hover:bg-purple-500 font-semibold" onclick="selectG2(this)">ganjil</div>
+                                <div class="word-chip bg-purple-600 px-4 py-2 rounded-full cursor-pointer hover:bg-purple-500 font-semibold" onclick="selectG2(this)">1</div>
+                                <div class="word-chip bg-purple-600 px-4 py-2 rounded-full cursor-pointer hover:bg-purple-500 font-semibold" onclick="selectG2(this)">persegi</div>
+                                <div class="word-chip bg-purple-600 px-4 py-2 rounded-full cursor-pointer hover:bg-purple-500 font-semibold" onclick="selectG2(this)">genap</div>
+                            </div>
+                            <div class="text-center mt-6">
+                                <button onclick="checkG2()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full font-bold transition">Cek Jawaban</button>
+                            </div>
+                        </div>
+
+                        <!-- Game 3: Fill the words (Isian Singkat) -->
+                        <div id="game-3" class="game-content hidden">
+                            <p class="text-center text-sm text-gray-300 mb-6">Ketiklah jawaban yang benar (huruf kecil semua atau angka) pada kolom isian di bawah ini.</p>
+                            
+                            <div class="bg-white/5 p-6 rounded-2xl leading-relaxed text-gray-200 border border-white/10">
+                                <p class="mb-4">
+                                    1. Jika kita mengamati nomor rumah di sebelah kiri jalan, biasanya bernomor 1, 3, 5, yang merupakan pola bilangan <input type="text" id="g3-1" class="w-24 bg-gray-800 border-b-2 border-blue-500 outline-none text-center text-white font-bold px-1" autocomplete="off">.
+                                </p>
+                                <p class="mb-4">
+                                    2. Suku ke-4 dari barisan ganjil tersebut adalah angka <input type="text" id="g3-2" class="w-16 bg-gray-800 border-b-2 border-blue-500 outline-none text-center text-white font-bold px-1" autocomplete="off">.
+                                </p>
+                                <p class="mb-4">
+                                    3. Sedangkan di kanan jalan bernomor 2, 4, 6, yang merupakan pola <input type="text" id="g3-3" class="w-24 bg-gray-800 border-b-2 border-blue-500 outline-none text-center text-white font-bold px-1" autocomplete="off">.
+                                </p>
+                                <p class="mb-4">
+                                    4. Rumus baku untuk mencari nilai urutan ke-n pada sisi genap adalah <input type="text" id="g3-4" class="w-16 bg-gray-800 border-b-2 border-blue-500 outline-none text-center text-white font-bold px-1" autocomplete="off">.
+                                </p>
+                                <p>
+                                    5. Susunan atau konfigurasi objek yang membentuk bangun datar memiliki keteraturan yang disebut <input type="text" id="g3-5" class="w-20 bg-gray-800 border-b-2 border-blue-500 outline-none text-center text-white font-bold px-1" autocomplete="off">.
+                                </p>
+                            </div>
+                            <div class="text-center mt-6">
+                                <button onclick="checkG3()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-full font-bold transition">Cek Jawaban</button>
+                            </div>
+                        </div>
+
+                        <!-- Game 4: Tebak Gambar -->
+                        <div id="game-4" class="game-content hidden">
+                            <div class="flex justify-between text-sm text-gray-400 mb-2">
+                                <span>Soal: <span id="g4-current">1</span>/5</span>
+                                <span>Skor: <span id="g4-score">0</span></span>
+                            </div>
+                            
+                            <div class="bg-white/5 p-6 rounded-2xl flex flex-col items-center border border-white/10 min-h-[250px] justify-center relative">
+                                <h3 class="text-xl font-bold text-white mb-6 text-center">Pola apakah ini?</h3>
+                                
+                                <!-- Canvas area for SVG image -->
+                                <div id="g4-image-container" class="mb-8 flex justify-center items-end h-32 w-full">
+                                    <!-- Dynamic SVG injected by JS -->
+                                </div>
+                                
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 w-full" id="g4-options">
+                                    <!-- Buttons injected by JS -->
+                                </div>
+                                
+                                <div id="g4-overlay" class="absolute inset-0 bg-gray-900/90 rounded-2xl flex flex-col items-center justify-center hidden backdrop-blur-sm z-10">
+                                    <h3 class="text-2xl font-bold text-white mb-2">Game Selesai!</h3>
+                                    <p class="text-gray-300 mb-4">Skor kamu: <span id="g4-final-score" class="text-yellow-400 font-bold text-xl"></span>/100</p>
+                                    <button onclick="resetG4()" class="bg-blue-600 px-6 py-2 rounded-full font-bold hover:bg-blue-500 transition">Main Lagi</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="slide-10" class="slide">
+            <div class="max-w-4xl mx-auto p-6 mt-4">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-orange-400"><i class="fas fa-question-circle mr-2"></i> Kuis Evaluasi</h2>
+                    <div class="bg-white/10 px-4 py-1 rounded-full text-sm">Soal <span id="quiz-current">1</span> dari 10</div>
+                </div>
+
+                <div class="glass p-6 md:p-8 rounded-3xl relative overflow-hidden min-h-[350px] flex flex-col">
+                    
+                    <!-- Kuis Progress Bar -->
+                    <div class="w-full bg-gray-700 h-2 rounded-full mb-6 overflow-hidden">
+                        <div id="quiz-progress" class="bg-gradient-to-r from-orange-400 to-red-500 h-full w-[10%] transition-all duration-300"></div>
+                    </div>
+
+                    <!-- Question Area -->
+                    <div id="quiz-question-container" class="flex-1">
+                        <h3 id="quiz-question" class="text-xl md:text-2xl font-semibold mb-6 text-white leading-relaxed">
+                            <!-- Question Text -->
+                        </h3>
+                        
+                        <div id="quiz-options" class="flex flex-col gap-3">
+                            <!-- Options -->
+                        </div>
+                    </div>
+
+                    <!-- Feedback Area (Hidden by default) -->
+                    <div id="quiz-feedback" class="hidden mt-6 p-4 rounded-xl border border-white/20 text-center">
+                        <p id="quiz-feedback-text" class="font-bold text-lg mb-2"></p>
+                        <button id="quiz-next-btn" onclick="nextQuizQuestion()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-full font-bold mt-2 text-white transition">Soal Selanjutnya <i class="fas fa-arrow-right ml-2"></i></button>
+                    </div>
+
+                    <!-- Kuis Result Overlay -->
+                    <div id="quiz-result" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center hidden z-20 p-6 text-center">
+                        <i class="fas fa-trophy text-6xl text-yellow-400 mb-4 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)]"></i>
+                        <h2 class="text-3xl font-bold text-white mb-2">Kuis Selesai!</h2>
+                        <p class="text-gray-300 mb-6">Berikut adalah hasil evaluasi belajarmu:</p>
+                        <div class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-blue-500 mb-6" id="quiz-final-score">100</div>
+                        <p id="quiz-motivation" class="text-lg text-yellow-200 mb-8 max-w-md"></p>
+                        
+                        <div class="flex gap-4">
+                            <button onclick="resetQuiz()" class="glass-btn px-6 py-3 rounded-full font-bold text-white"><i class="fas fa-redo mr-2"></i>Ulangi Kuis</button>
+                            <button onclick="goToSlide(11)" class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-full font-bold text-white transition">Lihat Rangkuman <i class="fas fa-arrow-right ml-2"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="slide-11" class="slide">
+            <div class="max-w-5xl mx-auto p-6 mt-10">
+                <h2 class="text-3xl font-bold text-center mb-8 text-pink-400">Rangkuman Materi</h2>
+                
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="glass p-6 rounded-2xl border-t-4 border-blue-400 transform transition hover:-translate-y-2">
+                        <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mb-4 text-blue-400 text-xl"><i class="fas fa-list-ol"></i></div>
+                        <h3 class="font-bold text-lg mb-2">Pola Ganjil & Genap</h3>
+                        <p class="text-sm text-gray-300">
+                            <strong>Ganjil:</strong> 1, 3, 5, 7, ...<br>Rumus: <code class="text-cyan-300">2n - 1</code><br><br>
+                            <strong>Genap:</strong> 2, 4, 6, 8, ...<br>Rumus: <code class="text-purple-300">2n</code>
+                        </p>
+                    </div>
+
+                    <div class="glass p-6 rounded-2xl border-t-4 border-cyan-400 transform transition hover:-translate-y-2">
+                        <div class="w-12 h-12 bg-cyan-500/20 rounded-full flex items-center justify-center mb-4 text-cyan-400 text-xl"><i class="fas fa-square"></i></div>
+                        <h3 class="font-bold text-lg mb-2">Pola Persegi & P.Panjang</h3>
+                        <p class="text-sm text-gray-300">
+                            <strong>Persegi:</strong> 1, 4, 9, 16, ...<br>Rumus: <code class="text-cyan-300">n²</code><br><br>
+                            <strong>P. Panjang:</strong> 2, 6, 12, 20, ...<br>Rumus: <code class="text-purple-300">n(n + 1)</code>
+                        </p>
+                    </div>
+
+                    <div class="glass p-6 rounded-2xl border-t-4 border-green-400 transform transition hover:-translate-y-2">
+                        <div class="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mb-4 text-green-400 text-xl"><i class="fas fa-caret-up"></i></div>
+                        <h3 class="font-bold text-lg mb-2">Pola Segitiga</h3>
+                        <p class="text-sm text-gray-300">
+                            Susunan objek berbentuk bangun datar segitiga.<br>
+                            Barisan: 1, 3, 6, 10, ...<br><br>
+                            Rumus: <code class="text-green-300">n(n + 1) / 2</code>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="slide-12" class="slide">
+            <div class="flex-1 flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-6 text-center">
+                <div class="glass p-8 md:p-12 rounded-3xl max-w-2xl w-full mx-auto">
+                    <div class="w-24 h-24 mx-auto bg-gradient-to-tr from-blue-500 to-purple-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-purple-500/50 text-4xl text-white">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-white mb-4">Selamat, Kamu Berhasil!</h2>
+                    <p class="text-gray-300 mb-8 leading-relaxed">
+                        Kamu telah menyelesaikan seluruh materi interaktif <strong>Pola Bilangan</strong>. Tetap semangat berlatih soal agar semakin mahir dalam Matematika ya!
+                    </p>
+                    
+                    <div class="bg-white/5 p-4 rounded-xl border border-white/10 mb-8 text-sm text-gray-400 text-left">
+                        <h4 class="font-bold text-gray-200 mb-2">Referensi & Sumber Belajar Lanjutan:</h4>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li>Buku Siswa Matematika SMP/MTs Kurikulum Merdeka.</li>
+                            <li>Channel YouTube: <strong>Bangkit Saputra</strong> (Silakan subscribe untuk video materi lainnya).</li>
+                        </ul>
+                    </div>
+
+                    <p class="font-semibold text-blue-300 mb-6">Salam Hangat,<br>I Made Edy Bangkit Saputra</p>
+                    
+                    <button onclick="goToSlide(1)" class="bg-white/10 hover:bg-white/20 px-8 py-3 rounded-full text-white transition font-medium border border-white/20">
+                        <i class="fas fa-home mr-2"></i> Kembali ke Menu Utama
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Bottom Navigation Controls -->
+        <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 flex gap-4 z-40 bg-slate-900/80 backdrop-blur-md px-6 py-3 rounded-full border border-white/10 shadow-xl" id="nav-bottom">
+            <button onclick="prevSlide()" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition disabled:opacity-30" id="btn-prev">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <button onclick="nextSlide()" class="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 flex items-center justify-center text-white transition disabled:opacity-30 shadow-[0_0_15px_rgba(37,99,235,0.5)]" id="btn-next">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Global Toast Component -->
+    <div id="toast-msg" class="toast bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg font-bold border border-white/20 flex items-center gap-3">
+        <i class="fas fa-info-circle"></i> <span id="toast-text">Pesan</span>
+    </div>
+
+    <!-- Canvas for Confetti -->
+    <canvas id="confetti-canvas"></canvas>
+
+    <script>
+        const totalSlides = 13;
+        let currentSlide = 0;
+
+        function updateUI() {
+            // Update Slides visibility
+            document.querySelectorAll('.slide').forEach((slide, index) => {
+                slide.classList.remove('active');
+                if(index === currentSlide) slide.classList.add('active');
+            });
+
+            // Update Indicator
+            document.getElementById('slide-indicator').innerText = `Slide ${currentSlide + 1}/${totalSlides}`;
+
+            // Update Buttons
+            document.getElementById('btn-prev').disabled = currentSlide === 0;
+            document.getElementById('btn-next').disabled = currentSlide === totalSlides - 1;
+
+            // Hide bottom nav on cover and menu if desired, but we keep it for consistency
+            if(currentSlide === 0) {
+                document.getElementById('btn-menu').style.display = 'none';
+            } else {
+                document.getElementById('btn-menu').style.display = 'flex';
+            }
+            
+            // Auto start simulation on slide 8
+            if(currentSlide === 8) updateSimulation();
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides - 1) { currentSlide++; updateUI(); }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) { currentSlide--; updateUI(); }
+        }
+
+        function goToSlide(index) {
+            currentSlide = index; updateUI();
+        }
+
+        function toggleFullscreen() {
+            const doc = window.document;
+            const docEl = doc.documentElement;
+            const icon = document.getElementById('icon-fullscreen');
+
+            const requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+            const cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
+
+            if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
+                requestFullScreen.call(docEl);
+                icon.classList.remove('fa-expand'); icon.classList.add('fa-compress');
+            } else {
+                cancelFullScreen.call(doc);
+                icon.classList.remove('fa-compress'); icon.classList.add('fa-expand');
+            }
+        }
+
+        function showToast(msg, type='info') {
+            const toast = document.getElementById('toast-msg');
+            const icon = toast.querySelector('i');
+            toast.className = `toast bg-${type==='success'?'green':type==='error'?'red':'blue'}-600 text-white px-6 py-3 rounded-full shadow-lg font-bold border border-white/20 flex items-center gap-3`;
+            icon.className = `fas ${type==='success'?'fa-check-circle':type==='error'?'fa-times-circle':'fa-info-circle'}`;
+            document.getElementById('toast-text').innerText = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        // Initialize UI
+        updateUI();
+
+        function updateSimulation() {
+            const type = document.getElementById('sim-type').value;
+            const n = parseInt(document.getElementById('sim-slider').value);
+            document.getElementById('sim-n-val').innerText = n;
+            
+            let result = 0;
+            let svgContent = '';
+            const size = 20; // grid size roughly
+            const radius = 6;
+            let viewBoxWidth = 200;
+            let viewBoxHeight = 200;
+
+            if (type === 'ganjil') {
+                result = 2 * n - 1;
+                // Draw L shape
+                for(let i=0; i<n; i++) {
+                    svgContent += `<circle cx="${20 + i*size}" cy="${180}" r="${radius}" fill="#3b82f6"/>`; // horizontal
+                }
+                for(let i=1; i<n; i++) {
+                    svgContent += `<circle cx="${20}" cy="${180 - i*size}" r="${radius}" fill="#3b82f6"/>`; // vertical
+                }
+            } 
+            else if (type === 'genap') {
+                result = 2 * n;
+                // Draw 2 rows
+                viewBoxWidth = Math.max(200, n*size + 40);
+                for(let i=0; i<n; i++) {
+                    svgContent += `<circle cx="${20 + i*size}" cy="80" r="${radius}" fill="#8b5cf6"/>`;
+                    svgContent += `<circle cx="${20 + i*size}" cy="${80 + size}" r="${radius}" fill="#8b5cf6"/>`;
+                }
+            }
+            else if (type === 'persegi') {
+                result = n * n;
+                viewBoxWidth = Math.max(200, n*size + 40);
+                for(let r=0; r<n; r++) {
+                    for(let c=0; c<n; c++) {
+                        svgContent += `<circle cx="${20 + c*size}" cy="${20 + r*size}" r="${radius}" fill="#06b6d4"/>`;
+                    }
+                }
+            }
+            else if (type === 'persegipanjang') {
+                result = n * (n + 1);
+                viewBoxWidth = Math.max(200, (n+1)*size + 40);
+                for(let r=0; r<n; r++) {
+                    for(let c=0; c<=n; c++) {
+                        svgContent += `<circle cx="${20 + c*size}" cy="${20 + r*size}" r="${radius}" fill="#eab308"/>`;
+                    }
+                }
+            }
+            else if (type === 'segitiga') {
+                result = (n * (n + 1)) / 2;
+                viewBoxWidth = Math.max(200, n*size + 40);
+                // Draw triangle
+                for(let r=1; r<=n; r++) {
+                    let startX = 100 - ((r-1) * size / 2); // Center align
+                    for(let c=0; c<r; c++) {
+                        svgContent += `<circle cx="${startX + c*size}" cy="${20 + (r-1)*size}" r="${radius}" fill="#22c55e"/>`;
+                    }
+                }
+            }
+
+            document.getElementById('sim-result').innerText = result;
+            document.getElementById('sim-visual').innerHTML = `<svg width="100%" height="100%" viewBox="0 0 ${viewBoxWidth} 200" preserveAspectRatio="xMidYMid meet">${svgContent}</svg>`;
+        }
+
+        function openGameTab(tabId) {
+            document.querySelectorAll('.game-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('game-' + tabId.replace('g','')).classList.remove('hidden');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        let g1Selected = null;
+        let g1Answers = { 'persegi': null, 'ganjil': null, 'segitiga': null, 'genap': null, 'persegipanjang': null };
+        const g1Correct = { 'persegi': 'persegi', 'ganjil': 'ganjil', 'segitiga': 'segitiga', 'genap': 'genap', 'persegipanjang': 'persegipanjang' };
+
+        function selectG1(el, type) {
+            if(el.classList.contains('correct')) return;
+            document.querySelectorAll('#g1-sources .drag-item').forEach(e => e.classList.remove('selected'));
+            el.classList.add('selected');
+            g1Selected = { el: el, type: type };
+        }
+
+        function dropG1(zone, expectedType) {
+            if(!g1Selected) { showToast("Pilih (klik) barisan angka di kiri terlebih dahulu!", "error"); return; }
+            
+            // if zone already has something, put it back
+            if(zone.children.length > 0) {
+                const existingItem = zone.children[0];
+                document.getElementById('g1-sources').appendChild(existingItem);
+            }
+            
+            // move selected element to zone
+            g1Selected.el.classList.remove('selected');
+            zone.appendChild(g1Selected.el);
+            g1Answers[expectedType] = g1Selected.type;
+            zone.classList.add('filled');
+            
+            g1Selected = null;
+        }
+
+        function checkG1() {
+            let correctCount = 0;
+            for(let key in g1Correct) {
+                if(g1Answers[key] === g1Correct[key]) correctCount++;
+            }
+            
+            if(correctCount === 5) {
+                showToast("Luar Biasa! Semua pasangan benar.", "success");
+                document.querySelectorAll('#game-1 .drag-item').forEach(el => {
+                    el.classList.add('correct');
+                    el.style.pointerEvents = 'none';
+                });
+            } else {
+                showToast(`Baru ${correctCount} yang benar. Coba tukar posisinya!`, "error");
+            }
+        }
+
+        let g2Selected = null;
+        
+        function selectG2(el) {
+            document.querySelectorAll('.word-chip').forEach(e => e.classList.remove('ring-4', 'ring-yellow-400'));
+            el.classList.add('ring-4', 'ring-yellow-400');
+            g2Selected = el;
+        }
+
+        function dropG2(zone, expectedVal) {
+            if(!g2Selected) { showToast("Klik kata di kotak bawah terlebih dahulu!", "error"); return; }
+            
+            // Swap if already filled
+            if(zone.innerText !== '') {
+                const oldWord = document.createElement('div');
+                oldWord.className = "word-chip bg-purple-600 px-4 py-2 rounded-full cursor-pointer hover:bg-purple-500 font-semibold";
+                oldWord.innerText = zone.innerText;
+                oldWord.onclick = function() { selectG2(this) };
+                document.getElementById('g2-words').appendChild(oldWord);
+            }
+
+            zone.innerText = g2Selected.innerText;
+            zone.dataset.val = g2Selected.innerText;
+            zone.classList.remove('border-dashed');
+            zone.classList.add('bg-blue-600', 'text-white', 'border-transparent', 'px-2', 'rounded');
+            
+            g2Selected.remove();
+            g2Selected = null;
+        }
+
+        function checkG2() {
+            const zones = document.querySelectorAll('.drop-zone-text');
+            let allFilled = true;
+            let allCorrect = true;
+            const correctOrder = ['persegi', '9', 'genap', 'ganjil', '1'];
+            
+            zones.forEach((z, i) => {
+                if(z.innerText === '') allFilled = false;
+                if(z.innerText !== correctOrder[i]) allCorrect = false;
+            });
+
+            if(!allFilled) { showToast("Isi semua bagian rumpang dulu ya!", "error"); return; }
+            
+            if(allCorrect) {
+                showToast("Sempurna! Susunan kalimat sudah tepat.", "success");
+            } else {
+                showToast("Masih ada kata yang tertukar. Perbaiki lagi!", "error");
+            }
+        }
+
+        function checkG3() {
+            const ans = [
+                document.getElementById('g3-1').value.toLowerCase().trim(),
+                document.getElementById('g3-2').value.trim(),
+                document.getElementById('g3-3').value.toLowerCase().trim(),
+                document.getElementById('g3-4').value.toLowerCase().trim(),
+                document.getElementById('g3-5').value.toLowerCase().trim()
+            ];
+            
+            const keys = ['ganjil', '7', 'genap', '2n', 'pola'];
+            let score = 0;
+            
+            ans.forEach((val, i) => {
+                const inputEl = document.getElementById(`g3-${i+1}`);
+                if(val === keys[i]) {
+                    score++;
+                    inputEl.classList.remove('border-blue-500', 'border-red-500', 'text-red-400');
+                    inputEl.classList.add('border-green-500', 'text-green-400');
+                    inputEl.disabled = true;
+                } else {
+                    inputEl.classList.remove('border-blue-500');
+                    inputEl.classList.add('border-red-500', 'text-red-400');
+                }
+            });
+
+            if(score === 5) {
+                showToast("Hebat! Semua jawaban benar.", "success");
+            } else {
+                showToast(`Kamu menjawab ${score} dengan benar. Coba perbaiki yang merah!`, "error");
+            }
+        }
+
+        const g4Data = [
+            { svg: '<circle cx="50" cy="50" r="10" fill="white"/><circle cx="80" cy="50" r="10" fill="white"/><circle cx="50" cy="80" r="10" fill="white"/><circle cx="80" cy="80" r="10" fill="white"/>', options: ['Ganjil', 'Persegi', 'Segitiga', 'Genap'], ans: 1 },
+            { svg: '<circle cx="65" cy="40" r="10" fill="white"/><circle cx="50" cy="70" r="10" fill="white"/><circle cx="80" cy="70" r="10" fill="white"/>', options: ['Segitiga', 'Persegi Panjang', 'Ganjil', 'Persegi'], ans: 0 },
+            { svg: '<circle cx="30" cy="50" r="8" fill="white"/><circle cx="55" cy="50" r="8" fill="white"/><circle cx="80" cy="50" r="8" fill="white"/><circle cx="105" cy="50" r="8" fill="white"/><circle cx="30" cy="75" r="8" fill="white"/><circle cx="55" cy="75" r="8" fill="white"/><circle cx="80" cy="75" r="8" fill="white"/><circle cx="105" cy="75" r="8" fill="white"/>', options: ['Genap', 'Ganjil', 'Persegi Panjang', 'Persegi'], ans: 2 },
+            { svg: '<circle cx="65" cy="30" r="10" fill="white"/><circle cx="65" cy="60" r="10" fill="white"/><circle cx="65" cy="90" r="10" fill="white"/><circle cx="95" cy="90" r="10" fill="white"/><circle cx="125" cy="90" r="10" fill="white"/>', options: ['Ganjil', 'Persegi', 'Segitiga', 'Genap'], ans: 0 }, // L shape (1, 3, 5..)
+            { svg: '<circle cx="50" cy="65" r="12" fill="white"/><circle cx="80" cy="65" r="12" fill="white"/>', options: ['Persegi', 'Genap', 'Ganjil', 'Segitiga'], ans: 1 }
+        ];
+        
+        let g4Current = 0;
+        let g4Score = 0;
+
+        function renderG4() {
+            if(g4Current >= g4Data.length) {
+                document.getElementById('g4-overlay').classList.remove('hidden');
+                document.getElementById('g4-final-score').innerText = (g4Score * 20);
+                return;
+            }
+
+            const q = g4Data[g4Current];
+            document.getElementById('g4-current').innerText = (g4Current + 1);
+            document.getElementById('g4-image-container').innerHTML = `<svg viewBox="0 0 150 120" class="w-48 h-full mx-auto drop-shadow-md filter drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">${q.svg}</svg>`;
+            
+            const optionsHtml = q.options.map((opt, i) => 
+                `<button onclick="answerG4(${i})" class="bg-gray-800 hover:bg-blue-600 border border-gray-600 hover:border-blue-400 py-3 rounded-xl font-bold transition">${opt}</button>`
+            ).join('');
+            
+            document.getElementById('g4-options').innerHTML = optionsHtml;
+        }
+
+        function answerG4(idx) {
+            if(idx === g4Data[g4Current].ans) {
+                g4Score++;
+                document.getElementById('g4-score').innerText = g4Score * 20;
+                showToast("Benar!", "success");
+            } else {
+                showToast("Kurang tepat!", "error");
+            }
+            g4Current++;
+            setTimeout(renderG4, 800); // small delay to see toast
+        }
+
+        function resetG4() {
+            g4Current = 0; g4Score = 0;
+            document.getElementById('g4-score').innerText = '0';
+            document.getElementById('g4-overlay').classList.add('hidden');
+            renderG4();
+        }
+        
+        renderG4(); // Init G4
+
+        const quizData = [
+            { type: 'mcq', q: 'Rumus suku ke-n untuk pola bilangan genap adalah...', options: ['2n - 1', 'n²', '2n', 'n(n+1)'], ans: 2 },
+            { type: 'mcq', q: 'Berapakah suku ke-10 dari pola bilangan persegi (kuadrat)?', options: ['20', '50', '100', '110'], ans: 2 }, // 10^2 = 100
+            { type: 'mcq', q: 'Pada pola bilangan ganjil, suku ke-5 adalah angka...', options: ['5', '9', '11', '13'], ans: 1 }, // 2(5)-1 = 9
+            { type: 'mcq', q: 'Barisan bilangan 2, 6, 12, 20 merupakan contoh dari pola...', options: ['Segitiga', 'Ganjil', 'Persegi', 'Persegi Panjang'], ans: 3 },
+            { type: 'mcq', q: 'Suku ke-4 dari pola segitiga (1, 3, 6, 10, ...) adalah...', options: ['6', '10', '12', '15'], ans: 1 },
+            // Soal Drag and Drop (diganti jadi klik pasangkan untuk kuis single UI)
+            { type: 'dnd', q: 'Pasangkan rumus "2n - 1" dengan nama pola yang tepat:', options: ['Pola Genap', 'Pola Ganjil', 'Pola Segitiga'], ans: 1 },
+            { type: 'dnd', q: 'Pasangkan rumus "n²" dengan nama pola yang tepat:', options: ['Pola Persegi', 'Pola Persegi Panjang', 'Pola Ganjil'], ans: 0 },
+            { type: 'dnd', q: 'Pasangkan barisan "1, 3, 6, 10" dengan nama polanya:', options: ['Pola Persegi', 'Pola Segitiga', 'Pola Genap'], ans: 1 },
+            // Soal Benar/Salah
+            { type: 'tf', q: 'Benar atau Salah: Pola bilangan 1, 4, 9, 16 adalah pola segitiga.', options: ['Benar', 'Salah'], ans: 1 },
+            { type: 'tf', q: 'Benar atau Salah: Suku ke-3 dari pola genap adalah angka 6.', options: ['Benar', 'Salah'], ans: 0 }
+        ];
+
+        let currentQIndex = 0;
+        let quizScore = 0;
+
+        function loadQuizQuestion() {
+            if(currentQIndex >= quizData.length) {
+                endQuiz(); return;
+            }
+
+            const q = quizData[currentQIndex];
+            document.getElementById('quiz-current').innerText = currentQIndex + 1;
+            document.getElementById('quiz-progress').style.width = `${((currentQIndex) / quizData.length) * 100}%`;
+            document.getElementById('quiz-question').innerText = q.q;
+            
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            document.getElementById('quiz-feedback').classList.add('hidden');
+
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left p-4 rounded-xl bg-gray-800/80 border border-gray-600 hover:bg-blue-600/50 hover:border-blue-400 transition font-medium text-lg';
+                btn.innerHTML = `<span class="inline-block w-8 h-8 rounded bg-black/30 text-center leading-8 mr-3 font-bold">${String.fromCharCode(65+idx)}</span> ${opt}`;
+                btn.onclick = () => submitQuizAnswer(idx, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function submitQuizAnswer(selectedIdx, btnEl) {
+            // Disable all buttons
+            const buttons = document.getElementById('quiz-options').querySelectorAll('button');
+            buttons.forEach(b => b.style.pointerEvents = 'none');
+
+            const q = quizData[currentQIndex];
+            const isCorrect = selectedIdx === q.ans;
+            
+            const feedbackContainer = document.getElementById('quiz-feedback');
+            const feedbackText = document.getElementById('quiz-feedback-text');
+
+            if (isCorrect) {
+                btnEl.classList.replace('bg-gray-800/80', 'bg-green-600/80');
+                btnEl.classList.replace('border-gray-600', 'border-green-400');
+                feedbackContainer.className = "mt-6 p-4 rounded-xl border border-green-400 bg-green-900/30 text-center animate-bounce";
+                feedbackText.innerHTML = '<i class="fas fa-check-circle text-green-400 text-2xl mb-2 block"></i> Tepat Sekali!';
+                quizScore++;
+            } else {
+                btnEl.classList.replace('bg-gray-800/80', 'bg-red-600/80');
+                btnEl.classList.replace('border-gray-600', 'border-red-400');
+                // highlight correct
+                buttons[q.ans].classList.replace('bg-gray-800/80', 'bg-green-600/80');
+                buttons[q.ans].classList.replace('border-gray-600', 'border-green-400');
+                
+                feedbackContainer.className = "mt-6 p-4 rounded-xl border border-red-400 bg-red-900/30 text-center";
+                feedbackText.innerHTML = '<i class="fas fa-times-circle text-red-400 text-2xl mb-2 block"></i> Kurang Tepat, yang benar adalah: ' + q.options[q.ans];
+            }
+            
+            feedbackContainer.classList.remove('hidden');
+            
+            // change button text if last question
+            if(currentQIndex === quizData.length - 1) {
+                document.getElementById('quiz-next-btn').innerHTML = 'Lihat Hasil <i class="fas fa-flag-checkered ml-2"></i>';
+            }
+        }
+
+        function nextQuizQuestion() {
+            currentQIndex++;
+            loadQuizQuestion();
+        }
+
+        function endQuiz() {
+            document.getElementById('quiz-progress').style.width = '100%';
+            const scorePercent = (quizScore / quizData.length) * 100;
+            document.getElementById('quiz-result').classList.remove('hidden');
+            
+            // Animasi angka skor
+            let counter = 0;
+            const scoreEl = document.getElementById('quiz-final-score');
+            const interval = setInterval(() => {
+                scoreEl.innerText = counter;
+                if(counter >= scorePercent) clearInterval(interval);
+                counter += 2;
+            }, 20);
+
+            const motivation = document.getElementById('quiz-motivation');
+            if (scorePercent >= 80) {
+                motivation.innerText = "Luar biasa! Pemahamanmu tentang Pola Bilangan sangat mantap.";
+                shootConfetti();
+            } else if (scorePercent >= 60) {
+                motivation.innerText = "Bagus! Kamu sudah cukup memahami, terus berlatih ya agar makin sempurna.";
+            } else {
+                motivation.innerText = "Jangan menyerah! Coba baca ulang materinya dan kerjakan lagi.";
+            }
+        }
+
+        function resetQuiz() {
+            currentQIndex = 0;
+            quizScore = 0;
+            document.getElementById('quiz-result').classList.add('hidden');
+            document.getElementById('quiz-next-btn').innerHTML = 'Soal Selanjutnya <i class="fas fa-arrow-right ml-2"></i>';
+            loadQuizQuestion();
+        }
+
+        loadQuizQuestion(); // Init quiz
+
+        function shootConfetti() {
+            const canvas = document.getElementById('confetti-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const particles = [];
+            const colors = ['#fce18a', '#ff726d', '#b48def', '#f4306d', '#60a5fa'];
+
+            for (let i = 0; i < 150; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2 + 100,
+                    r: Math.random() * 6 + 2,
+                    dx: Math.random() * 20 - 10,
+                    dy: Math.random() * -20 - 5,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    tilt: Math.floor(Math.random() * 10) - 10,
+                    tiltAngle: 0,
+                    tiltAngleInc: (Math.random() * 0.07) + 0.05
+                });
+            }
+
+            let animationFrame;
+            function render() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let allDead = true;
+                particles.forEach(p => {
+                    if(p.y < canvas.height) allDead = false;
+                    p.tiltAngle += p.tiltAngleInc;
+                    p.y += (Math.cos(p.tiltAngle) + 1 + p.r / 2) / 2;
+                    p.x += Math.sin(p.tiltAngle) * 2;
+                    p.dy += 0.2; // gravity
+                    p.y += p.dy;
+                    p.x += p.dx;
+                    
+                    ctx.beginPath();
+                    ctx.lineWidth = p.r;
+                    ctx.strokeStyle = p.color;
+                    ctx.moveTo(p.x + p.tilt + p.r, p.y);
+                    ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r);
+                    ctx.stroke();
+                });
+                
+                if(!allDead) animationFrame = requestAnimationFrame(render);
+                else { ctx.clearRect(0, 0, canvas.width, canvas.height); cancelAnimationFrame(animationFrame); }
+            }
+            render();
+        }
+
+        // Handle resize for confetti canvas
+        window.addEventListener('resize', () => {
+            const canvas = document.getElementById('confetti-canvas');
+            if(canvas) { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        });
+
+    </script>
+</body>
+</html>
